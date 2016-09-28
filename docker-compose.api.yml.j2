@@ -1,0 +1,73 @@
+version: '2'
+services:
+  db:
+    image: postgres:9.5.3
+    ports:
+      - "5432:5432"
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
+    networks:
+      - api
+    logging:
+      driver: syslog
+  
+  api:
+    image: casecommons/casebook_api:{{ api_image_tag }}
+    command: bundle exec puma
+    ports:
+      - "80:3000"
+    environment:
+      DATABASE_NAME: 'casebook_api_production'
+      PG_HOST: db
+      PG_PORT: 5432
+      PG_USER: postgres
+      RAILS_ENV: production
+      SECRET_KEY_BASE: '{{ rails_secret_key_base.stdout }}'
+      REDIS_DATABASE: redis://redis:6379/0
+      ELASTICSEARCH_URL: 'http://elasticsearch:9200'
+    networks:
+      - api
+
+  redis:
+    image: redis:3.2-alpine
+    command: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - /var/lib/redis/data:/data
+    networks:
+      - api
+
+  sidekiq:
+    image: casecommons/casebook_api:{{ api_image_tag }}
+    command: bundle exec sidekiq
+    environment:
+      DATABASE_NAME: 'casebook_api_production'
+      PG_HOST: db
+      PG_PORT: 5432
+      PG_USER: postgres
+      RAILS_ENV: production
+      SECRET_KEY_BASE: '{{ rails_secret_key_base.stdout }}'
+      REDIS_DATABASE: redis://redis:6379/0
+      ELASTICSEARCH_URL: 'http://elasticsearch:9200'
+    networks:
+      - api
+    logging:
+      driver: syslog
+    depends_on:
+      - db
+
+  elasticsearch:
+    image: elasticsearch:2.4
+    ports:
+      - "9200:9200"
+    networks:
+      - api 
+    volumes:
+      - /usr/share/elasticsearch/data:/usr/share/elasticsearch/data
+    logging:
+      driver: syslog
+networks:
+  api:
+    external:
+      name: api

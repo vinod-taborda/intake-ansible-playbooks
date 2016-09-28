@@ -1,0 +1,40 @@
+---
+- name: Generate a rails secret key
+  local_action: shell uuidgen
+  register: rails_secret_key_base
+
+- name: Generate docker-compose file
+  template:
+    src: ./docker-compose.app.yml.j2
+    dest: '{{ project_source }}/docker-compose.app.yml'
+
+- name: Force a pull of the latest docker images.
+  command: docker-compose -f docker-compose.app.yml --project-name={{ project_name }} pull
+
+- name: Create directory structure /etc/nginx/ssl
+  file: path={{ ssl_path }} state=directory mode=0755
+
+- name: Generate "nginx.conf" from Ansible to docker host
+  template:
+    src: ./nginx/nginx.conf.j2
+    dest: '{{ nginx_conf_fullpath }}'
+
+- name: Copy encrypted "nginx.crt" from Ansible to docker host
+  copy: remote_src=False src=./tmp/nginx.crt dest={{ ssl_path }}/{{ ssl_crt_file }}
+
+- name: Copy encrypted "nginx.key" from Ansible to docker host
+  copy: remote_src=False src=./tmp/nginx.key dest={{ ssl_path }}/{{ ssl_key_file }}
+
+- name: Delete nginx crt files from Ansible host
+  local_action: file name=./nginx/ssl/nginx.crt state=absent
+
+- name: Delete nginx key files from Ansible host
+  local_action: file name=./nginx/ssl/nginx.key state=absent
+
+- name: Down any existing containers and volumes
+  command: docker-compose -f docker-compose.app.yml --project-name={{ project_name }} down --remove-orphans
+
+- name: Start up the docker service
+  command: docker-compose -f docker-compose.app.yml --project-name={{ project_name }} up -d --remove-orphans
+
+

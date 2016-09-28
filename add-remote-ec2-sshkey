@@ -1,0 +1,20 @@
+#!/bin/bash
+
+## Juan
+## Copy ssh key to remote host
+
+
+echo;echo
+read -rp "*** Enter ip address of remote host to be added: " ip_addr
+echo
+
+echo $ip_addr 
+
+if echo ${ip_addr} | egrep '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+   scp -i /home/ec2-user/.ssh/id_rsa.pem -o StrictHostKeyChecking=no \
+   /home/ec2-user/.ssh/authorized_keys  \
+   ec2-user\@${ip_addr}:/home/ec2-user/.ssh/authorized_keys
+else
+   echo -e "\nInvalid IP address ***\n"
+   exec $0
+fi

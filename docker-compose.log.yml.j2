@@ -1,0 +1,25 @@
+version: '2'
+services:
+  elasticsearch:
+    image: elasticsearch:2.4
+    ports:
+      - "9200:9200"
+    networks:
+      - logging
+    logging:
+      driver: syslog
+
+  kibana:
+    image: kibana:4
+    ports:
+      - "80:5601"
+    networks:
+      - logging
+    logging:
+      driver: syslog
+
+networks:
+  logging:
+    external:
+      name: logging
+

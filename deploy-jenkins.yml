@@ -1,0 +1,30 @@
+- name: Generate docker-compose file for jenkins
+  template:
+    src: ./docker-compose.jenkins.yml.j2
+    dest: '{{ project_source }}/docker-compose.jenkins.yml'
+
+- name: Create directory structure /etc/nginx/ssl
+  file: path={{ ssl_path }} state=directory mode=0755
+
+- name: Generate "nginx.conf" from Ansible to docker host
+  template:
+    src: ./nginx/nginx.jenkins.conf.j2
+    dest: '{{ nginx_conf_fullpath }}'
+
+- name: Copy ssl cert from Ansible Host to Nginx Host
+  copy: remote_src=False src=./tmp/{{ ssl_crt_file }} dest={{ ssl_path }}/{{ ssl_crt_file }}
+
+- name: Copy ssl key from Ansible Host to Nginx Host
+  copy: remote_src=False src=./tmp/{{ ssl_key_file }} dest={{ ssl_path }}/{{ ssl_key_file }}
+
+- name: Create volume for jenkins home directory
+  command: docker volume create --name=jenkins_home
+
+- name: Force a pull of the latest docker images.
+  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} pull
+
+- name: Down any existing containers and volumes
+  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} down --remove-orphans
+
+- name: Start up the docker service
+  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} up -d --remove-orphans

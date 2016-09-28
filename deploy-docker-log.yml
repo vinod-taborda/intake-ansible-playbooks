@@ -1,0 +1,18 @@
+---
+
+
+
+- name: Generate docker-compose file
+  template:
+    src: ./docker-compose.log.yml.j2
+    dest: '{{ project_source }}/docker-compose.log.yml'
+
+- name: Pull necessary images
+  command: docker-compose -f docker-compose.log.yml --project-name={{ project_name }} pull
+
+- name: Down any existing containers and volumes
+  command: docker-compose -f docker-compose.log.yml --project-name={{ project_name }} down --remove-orphans
+
+- name: Start up the docker service
+  command: docker-compose -f docker-compose.log.yml --project-name={{ project_name }} up -d --remove-orphans
+

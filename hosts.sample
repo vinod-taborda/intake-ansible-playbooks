@@ -1,0 +1,13 @@
+[ansible-host]
+127.0.0.1 
+
+[logging-node]
+<INSERT_IP_ADDR_OR_HOSTNAME>
+
+[api-node]
+<INSERT_IP_ADDR_OR_HOSTNAME>
+
+[intake-node]
+<INSERT_IP_ADDR_OR_HOSTNAME>
+<INSERT_IP_ADDR_OR_HOSTNAME>
+

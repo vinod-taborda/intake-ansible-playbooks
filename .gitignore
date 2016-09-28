@@ -1,0 +1,4 @@
+*.pem
+misc
+hosts
+nginx/ssl/*

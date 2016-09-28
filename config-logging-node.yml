@@ -1,0 +1,159 @@
+--- 
+- hosts: ansible-host
+  connection: local
+  gather_facts: no
+  become: yes
+
+  vars:
+    baseurl: http://mirror.sfo12.us.leaseweb.net/epel//7Server/x86_64/
+    gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+    secrets_bucket: accelerator-s3-secrets
+    ssl_key_file: nginx.key
+    ssl_crt_file: nginx.crt
+
+  tasks:
+
+  - name: Add EPEL repository
+    yum_repository:
+      name: epel
+      description: EPEL YUM repo
+      baseurl: '{{ baseurl }}'
+      gpgkey: '{{ gpgkey }}'
+      gpgcheck: yes
+
+  - name: install misc packages
+    yum: name={{ item }} state=present
+    with_items:
+    - python-pip
+    - vim
+    - wget
+    - curl
+
+  - name: Install boto
+    pip: name=boto state=present
+
+  - name: Ensure tmp directory exists
+    file: path=./tmp state=directory mode=777
+
+  - name: Copy nginx.crt to local
+    s3:
+      bucket: '{{ secrets_bucket }}'
+      object: '{{ item }}'
+      dest: './tmp/{{ item }}'
+      mode: get
+    with_items:
+    - '{{ ssl_crt_file }}'
+    - '{{ ssl_key_file }}'
+
+  - name: Copy datadog key to local
+    s3:
+      bucket: '{{ secrets_bucket }}'
+      object: 'dd-agent.key'
+      dest: './tmp/dd-agent.key'
+      mode: get
+
+#####################################
+ 
+- hosts: logging-node
+  connection: ssh
+  user: ec2-user
+  become: yes
+  gather_facts: yes
+
+  vars:
+    baseurl: http://mirror.sfo12.us.leaseweb.net/epel//7Server/x86_64/
+    gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+    project_name: accelerator
+    project_source: /home/ec2-user
+
+  pre_tasks:
+  - name: Add EPEL repository
+    yum_repository:
+      name: epel
+      description: EPEL YUM repo
+      baseurl: '{{ baseurl }}'
+      gpgcheck: yes
+      gpgkey: '{{ gpgkey }}'
+
+  - name: Add Adiscon (rsyslog) repository
+    yum_repository:
+      name: Adiscon
+      description: Adiscon YUM repo
+      baseurl: http://rpms.adiscon.com/v8-stable/epel-7/x86_64/
+      gpgcheck: yes
+      gpgkey: http://rpms.adiscon.com/RPM-GPG-KEY-Adiscon
+
+  - name: install misc packages
+    yum: name={{ item }} state=present
+    with_items:
+    - python-pip
+    - vim
+    - wget
+    - curl
+    - rsyslog
+    - rsyslog-elasticsearch
+
+  roles:
+  - dochang.docker
+
+  post_tasks:
+  - name: Ensure presence of directory /var/lib/rsyslog
+    file: name=/var/lib/rsyslog/ state=directory
+
+  - name: Turn off SELinux
+    selinux: policy=targeted state=permissive
+
+  - name: Generate rsyslog conf
+    template:
+      src: ./rsyslog.conf.j2
+      dest: /etc/rsyslog.conf
+    notify:
+    - Restart rsyslog
+
+  - name: Generate docker logging conf
+    template:
+      src: ./99-docker.conf.j2
+      dest: /etc/rsyslog.d/99-docker.conf
+    notify:
+    - Restart rsyslog
+
+  - name: Ensure the users exists
+    user: name=i{{ item }} group=docker state=present
+    with_items:
+    - docker
+    - deploy
+    - ec2-user
+    - dd-agent
+
+  - name: Install docker-compose via python pip
+    pip: name=docker-compose
+
+  - name: Create a docker network
+    command: docker network create logging
+    ignore_errors: True
+
+  - include: deploy-docker-log.yml
+    vars:
+      project_name: log
+    tags: log_app
+
+  - name: Remove stopped containers older than a week
+    shell: docker ps -a | awk '/Exited/ && /weeks ago/ {print "docker rm", $1}' | sh
+
+  - name: Remove images of stopped containers except for those still in use
+    shell: docker images -qa | { xargs -r docker rmi; echo; }
+
+  - name: Remove dangling volumes
+    shell: docker volume ls -qf dangling=true | xargs -r docker volume rm
+
+  handlers:
+  - name: Restart rsyslog
+    service: name=rsyslog state=restarted
+  - name: systemctl daemon-reload
+    command: systemctl daemon-reload
+
+######################################
+
+- include: add-datadog-agent.yml
+  vars:
+    hosts: logging-node

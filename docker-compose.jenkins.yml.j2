@@ -1,0 +1,36 @@
+version: '2'
+
+volumes:
+  jenkins_home:
+    external: true
+
+services:
+  nginx:
+    image: nginx:stable
+    ports: 
+      - "80:80"
+      - "443:443"
+    volumes:
+      - {{nginx_conf_fullpath}}:/etc/nginx/nginx.conf
+      - {{ssl_path}}/{{ssl_crt_file}}:/etc/nginx/ssl/mycasebook.crt
+      - {{ssl_path}}/{{ssl_key_file}}:/etc/nginx/ssl/mycasebook.key
+    networks:
+      - ci
+
+  jenkin:
+    image: casecommons/ca_jenkins:{{ image_tag }}
+    environment:
+      DOCKER_ENGINE: "1.12.0"
+      DOCKER_COMPOSE: "1.8.0"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    networks:
+      - ci
+
+networks:
+  ci:
+    external:
+      name: ci

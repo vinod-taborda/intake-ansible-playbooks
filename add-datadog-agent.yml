@@ -1,0 +1,45 @@
+- hosts: '{{ hosts }}'
+  user: ec2-user
+  become: yes
+
+  pre_tasks:
+  - name: cat the dd-agent-key into a variable 
+    local_action: command cat ./tmp/dd-agent.key
+    register: datadog_key 
+  
+  vars:
+    datadog_api_key: "{{ datadog_key.stdout }}"
+    datadog_checks:
+      process:
+        init_config:
+        instances:
+          - name: dockerd
+            search_string: ['dockerd']
+          - name: ssh
+            search_string: ['ssh', 'sshd']
+          - name: syslog
+            search_string: ['rsyslog']
+            cpu_check_interval: 0.2
+            exact_match: true
+            ignore_denied_access: true
+      
+      docker_daemon:
+        init_config:
+        instances:
+          - url: "unix://var/run/docker.sock" 
+
+  roles:
+  - Datadog.datadog
+
+  post_tasks:
+  - name: Add datadog user to docker group
+    user: groups=docker name={{ item }} state=present append=yes
+    with_items: 
+    - docker
+    - deploy
+    - dd-agent
+
+
+  - name: Restart datadog
+    service: name=datadog-agent state=restarted enabled=yes
+

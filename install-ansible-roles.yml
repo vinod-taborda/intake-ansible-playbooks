@@ -1,0 +1,10 @@
+---
+
+- hosts: ansible-host
+  connection: local
+  user: ec2-user
+
+  tasks:
+  - raw: ansible-galaxy install dochang.docker
+    register: results1
+  - debug: var=results1

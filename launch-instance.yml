@@ -1,0 +1,42 @@
+--- ### Launch ansible host on AWS from my localhost  
+
+- hosts: ansible-host
+  connection: local
+  gather_facts: no
+
+  vars:
+    region: us-east-1
+    subnet: subnet-d5e30f9c
+    ami_to_use: ami-2051294a
+    ###ami_to_use: ami-6869aa05
+    ##ami_to_use: ami-2d39803a
+    instance_type: t2.micro
+    keypair: juan-keypair
+    security_group: launch-wizard-1
+    instance_name: docker 6 
+    env_tag: juan-testing
+    ##vpc: vpc-915910f4 
+    ##zone: us-east-1
+
+  tasks:
+
+  - name: Launch instance
+    ec2:
+      region: "{{ region }}"
+      vpc_subnet_id: "{{ subnet }}"
+      group: "{{ security_group }}"
+      image: "{{ ami_to_use }}"
+      instance_type: "{{ instance_type }}"
+      ##zone: "{{ zone }}"
+      key_name: "{{ keypair }}"
+      state: present
+      wait: yes
+      ##wait_timeout: 500
+      ##count: 1
+      instance_tags:
+        Name: "{{ instance_name }}"
+        environment: "{{ env_tag }}"
+      assign_public_ip: no
+      volumes:
+        - device_name: /dev/sda1
+          volume_size: 16

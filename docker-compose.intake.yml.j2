@@ -1,0 +1,38 @@
+version: '2'
+services:
+  nginx:
+    image: nginx:stable
+    ports: 
+      - "80:80"
+      - "443:443"
+    volumes:
+      - {{nginx_conf_fullpath}}:/etc/nginx/nginx.conf
+      - {{ssl_path}}/{{ssl_crt_file}}:/etc/nginx/ssl/nginx.crt
+      - {{ssl_path}}/{{ssl_key_file}}:/etc/nginx/ssl/nginx.key      
+    volumes_from:
+      - app:ro
+    networks:
+      - intake
+    logging:
+      driver: syslog
+  
+  app:
+    image: casecommons/ca_intake:{{ intake_image_tag }}
+    command: bundle exec puma
+    ports:
+      - "8080:3000"
+    environment:
+      API_URL: "{{ api_url }}"
+      RAILS_ENV: production
+      SECRET_KEY_BASE: '{{ rails_secret_key_base.stdout }}'
+      ELASTICSEARCH_URL: '{{ intake_elasticsearch_url }}'
+    networks:
+      - intake
+    logging:
+      driver: syslog
+
+networks:
+  intake:
+    external:
+      name: intake
+

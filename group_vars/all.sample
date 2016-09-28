@@ -1,0 +1,5 @@
+elasticsearch_log_server: <INSERT_IP_OR_SERVER_NAME>
+intake_image_tag: <INSERT_IMAGE_TAG>
+api_image_tag: <INSERT_IMAGE_TAG>
+api_url: <INSERT_API_URL>
+intake_elasticsearch_url: <INSERT_INTAKE_ELASTICSEARCH_URL>

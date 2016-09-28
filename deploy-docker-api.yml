@@ -1,0 +1,30 @@
+---
+- name: Generate a rails secret key
+  local_action: shell uuidgen
+  register: rails_secret_key_base
+
+- name: Generate docker-compose file
+  template:
+    src: ./docker-compose.api.yml.j2
+    dest: '{{ project_source }}/docker-compose.api.yml'
+
+- name: Force a pull of the latest docker images.
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} pull
+
+- name: Down any existing containers and volumes
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} down --remove-orphans
+
+- name: Start up the docker service
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} up -d --remove-orphans
+
+- name: Wait for DB to be up
+  wait_for: host={{ ansible_hostname }} port=5432 delay=10
+
+- name: Run rake db create
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} run api bundle exec rake db:create
+
+- name: Run rake db migrate
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} run api bundle exec rake db:migrate
+
+- name: Run search reindex
+  command: docker-compose -f docker-compose.api.yml --project-name={{ project_name }} run api bundle exec rake search:migrate search:reindex
