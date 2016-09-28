@@ -157,10 +157,6 @@
   - name: Install docker-compose via python pip
     pip: name=docker-compose
 
-  - name: Generate a rails secret key
-    local_action: shell uuidgen
-    register: rails_secret_key_base
-
   - name: Create a docker network
     command: docker network create intake
     ignore_errors: True
