@@ -21,6 +21,8 @@
       baseurl: '{{ baseurl }}'
       gpgkey: '{{ gpgkey }}'
       gpgcheck: yes
+    tags:
+      - local_dependencies
 
   - name: install misc packages
     yum: name={{ item }} state=present
@@ -29,6 +31,8 @@
     - vim
     - wget
     - curl
+    tags:
+      - local_dependencies
 
   - name: Install boto
     pip: name=boto state=present
@@ -42,7 +46,7 @@
       object: '{{ ssl_key_file }}'
       dest: './tmp/nginx.key'
       mode: get
-  
+
   - name: Copy nginx.crt to local
     s3:
       bucket: '{{ secrets_bucket }}'
@@ -105,7 +109,7 @@
     - vim
     - wget
     - curl
-    - telnet 
+    - telnet
     - rsyslog
     - rsyslog-elasticsearch
 
@@ -143,13 +147,13 @@
 
   - name: Force installation of 'docker-py version 1.9.0'
     shell: pip install 'docker-py==1.9.0' --force-reinstall
-  
+
   - name: Login to docker
     docker_login:
       username: '{{ username }}'
       email: '{{ email }}'
       password: '{{ password }}'
-  
+
   - name: Install docker-compose via python pip
     pip: name=docker-compose
 
