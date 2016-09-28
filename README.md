@@ -1,4 +1,4 @@
-# Accelerator Ansible
+# Accelerator Playbooks
 This is an initial version of the ansible playbooks meant to accelerate development of the Intake Accelerator. You will find a mixture of provisioning, configuration, and management of Docker hosts. 
 
 
