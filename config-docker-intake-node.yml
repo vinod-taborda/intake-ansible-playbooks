@@ -3,7 +3,6 @@
 - hosts: ansible-host
   connection: local
   gather_facts: no
-  become: yes
 
   vars:
     baseurl: http://mirror.sfo12.us.leaseweb.net/epel//7Server/x86_64/

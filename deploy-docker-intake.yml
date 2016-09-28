@@ -1,6 +1,6 @@
 ---
 - name: Generate a rails secret key
-  local_action: shell uuidgen
+  action: shell uuidgen
   register: rails_secret_key_base
 
 - name: Generate docker-compose file
