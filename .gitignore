@@ -2,3 +2,4 @@
 misc
 hosts
 nginx/ssl/*
+group_vars/all
