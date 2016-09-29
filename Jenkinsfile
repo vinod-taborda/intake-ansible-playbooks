@@ -7,7 +7,8 @@ node {
             "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}", 
             "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}",
             "DOCKER_EMAIL=${DOCKER_EMAIL}",
-            "DOCKER_IMAGE=${IMAGE_TAG}"
+            "DOCKER_IMAGE=${IMAGE_TAG}",
+            "ANSIBLE_HOST_KEY_CHECKING=False"
             ]) {
 
             withCredentials([
