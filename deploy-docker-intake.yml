@@ -1,6 +1,6 @@
 ---
 - name: Generate a rails secret key
-  local_action: shell uuidgen
+  action: shell uuidgen
   register: rails_secret_key_base
 
 - name: Generate docker-compose file
@@ -24,12 +24,6 @@
 
 - name: Copy encrypted "nginx.key" from Ansible to docker host
   copy: remote_src=False src=./tmp/nginx.key dest={{ ssl_path }}/{{ ssl_key_file }}
-
-- name: Delete nginx crt files from Ansible host
-  local_action: file name=./nginx/ssl/nginx.crt state=absent
-
-- name: Delete nginx key files from Ansible host
-  local_action: file name=./nginx/ssl/nginx.key state=absent
 
 - name: Down any existing containers and volumes
   command: docker-compose -f docker-compose.intake.yml --project-name={{ project_name }} down --remove-orphans

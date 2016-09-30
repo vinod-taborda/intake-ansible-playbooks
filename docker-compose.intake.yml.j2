@@ -17,7 +17,7 @@ services:
       driver: syslog
   
   app:
-    image: casecommons/ca_intake:{{ intake_image_tag }}
+    image: {{ intake_image_tag }}
     command: bundle exec puma
     ports:
       - "8080:3000"
