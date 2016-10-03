@@ -3,7 +3,6 @@
 - hosts: ansible-host
   connection: local
   gather_facts: no
-  become: yes
 
   vars:
     baseurl: http://mirror.sfo12.us.leaseweb.net/epel//7Server/x86_64/
@@ -19,6 +18,8 @@
       baseurl: '{{ baseurl }}'
       gpgkey: '{{ gpgkey }}'
       gpgcheck: yes
+    tags:
+      - local_dependencies
 
   - name: install misc packages
     yum: name={{ item }} state=present
@@ -27,9 +28,13 @@
     - vim
     - wget
     - curl
+    tags:
+      - local_dependencies
 
   - name: Install boto
     pip: name=boto state=present
+    tags:
+      - local_dependencies
 
   - name: Ensure tmp directory exists
     file: path=./tmp state=directory mode=777
@@ -41,8 +46,8 @@
       dest: './tmp/dd-agent.key'
       mode: get
 
-################################### 
- 
+###################################
+
 - hosts: api-node
   connection: ssh
   user: ec2-user
@@ -90,7 +95,7 @@
     - vim
     - wget
     - curl
-    - telnet 
+    - telnet
     - rsyslog
     - rsyslog-elasticsearch
 
@@ -163,9 +168,9 @@
 
 #######################################
 
-- include: add-datadog-agent.yml 
-  vars: 
-    hosts: api-node  
+- include: add-datadog-agent.yml
+  vars:
+    hosts: api-node
   tags: datadog
 
 - include: cleanup.yml
