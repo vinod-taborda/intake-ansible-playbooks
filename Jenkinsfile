@@ -16,13 +16,18 @@ node {
                 [$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker_credentials',
                             usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD']
             ]) {
-                sh 'ansible-galaxy install -p ./roles dochang.docker'
-                sh 'ansible-galaxy install -p ./roles Datadog.datadog'
+                stage('Install dependencies') {
+                    sh 'ansible-galaxy install -p ./roles dochang.docker'
+                    sh 'ansible-galaxy install -p ./roles Datadog.datadog'
+                }
+                stage('Write variable files') {
+                    writeFile file: './hosts', text: HOSTS
+                    writeFile file: './group_vars/all', text: GROUP_VARS
+                }
 
-                writeFile file: './hosts', text: HOSTS
-                writeFile file: './group_vars/all', text: GROUP_VARS
-
-                sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE username=$DOCKER_USER email=$DOCKER_EMAIL password=$DOCKER_PASSWORD" config-docker-intake-node.yml'
+                stage('Deploy') {
+                    sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE username=$DOCKER_USER email=$DOCKER_EMAIL password=$DOCKER_PASSWORD" config-docker-intake-node.yml'
+                }
             }
         }
     }
