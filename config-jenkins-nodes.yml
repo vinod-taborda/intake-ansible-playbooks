@@ -164,3 +164,9 @@
 
   - name: Remove dangling volumes
     shell: docker volume ls -qf dangling=true | xargs -r docker volume rm
+
+- include: add-datadog-agent.yml
+  vars:
+    hosts: jenkins-node
+
+- include: cleanup.yml
