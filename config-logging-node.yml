@@ -1,4 +1,4 @@
---- 
+---
 - hosts: ansible-host
   connection: local
   gather_facts: no
@@ -53,7 +53,7 @@
       mode: get
 
 #####################################
- 
+
 - hosts: logging-node
   connection: ssh
   user: ec2-user
@@ -107,15 +107,17 @@
     template:
       src: ./rsyslog.conf.j2
       dest: /etc/rsyslog.conf
-    notify:
-    - Restart rsyslog
+    register: rsyslog_conf
 
   - name: Generate docker logging conf
     template:
       src: ./99-docker.conf.j2
       dest: /etc/rsyslog.d/99-docker.conf
-    notify:
-    - Restart rsyslog
+    register: rsyslog_logging_conf
+
+  - name: Restart rsyslog
+    service: name=rsyslog state=restarted
+    when: rsyslog_conf.changed or rsyslog_logging_conf.changed
 
   - name: Ensure the users exists
     user: name=i{{ item }} group=docker state=present
@@ -145,12 +147,6 @@
 
   - name: Remove dangling volumes
     shell: docker volume ls -qf dangling=true | xargs -r docker volume rm
-
-  handlers:
-  - name: Restart rsyslog
-    service: name=rsyslog state=restarted
-  - name: systemctl daemon-reload
-    command: systemctl daemon-reload
 
 ######################################
 
