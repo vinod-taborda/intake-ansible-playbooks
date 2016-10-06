@@ -152,6 +152,10 @@
       subdomain_name: ci.mycasebook.org
     tags: jenkins
 
+  - include: add-datadog-agent.yml
+    vars:
+      hosts: jenkins-node
+
   - name: Remove stopped containers older than a week
     shell: docker ps -a | awk '/Exited/ && /weeks ago/ {print "docker rm", $1}' | sh
 
@@ -160,3 +164,9 @@
 
   - name: Remove dangling volumes
     shell: docker volume ls -qf dangling=true | xargs -r docker volume rm
+
+- include: add-datadog-agent.yml
+  vars:
+    hosts: jenkins-node
+
+- include: cleanup.yml
