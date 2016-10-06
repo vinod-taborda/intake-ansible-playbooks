@@ -1,5 +1,5 @@
 # Accelerator Playbooks
-This is an initial version of the ansible playbooks meant to accelerate development of the Intake Accelerator. You will find a mixture of provisioning, configuration, and management of Docker hosts. 
+This is an initial version of the ansible playbooks meant to accelerate development of the Intake Accelerator and Jenkins pipelines that automate the ansible playbooks. You will find a mixture of provisioning, configuration, and management of Docker hosts. 
 
 
 ## Relevant Files:
@@ -16,59 +16,85 @@ This is an initial version of the ansible playbooks meant to accelerate developm
 `deploy-docker-intake.yml` 
 `deploy-docker-log.yml` 
 
-### And these jinja2 templates are used by the playbooks above this:
+### These jinja2 templates are used by the playbooks above this:
 
 `docker-compose.api.yml.j2` 
 `docker-compose.intake.yml.j2` 
 `docker-compose.log.yml.j2` 
 
+### These Jenkins files are used by Jenkins for building a pipeline
+
+`Jenkinsfile`
+`Jenkinsfile.api`
+
 ### Variables:
 
-`group_vars/all` This file contains variables that all playbooks will use. Currently: 
-    ```
-    elasticsearch_log_server: <INSERT_IP_OR_SERVER_NAME> 
-    intake_image_tag: <INSERT_IMAGE_TAG_HERE>
-    api_image_tag: <INSERT_IMAGE_TAG_HERE>
-    ```
+`group_vars/all` This file contains variables that all playbooks will use. Currently:
+ ```
+elasticsearch_log_server: <INSERT_IP_OR_SERVER_NAME> 
+intake_image_tag: <INSERT_IMAGE_TAG_HERE>
+api_image_tag: <INSERT_IMAGE_TAG_HERE>
+api_url: <INSERT_API_URL>
+intake_elasticsearch_url: <INSERT_INTAKE_ELASTICSEARCH_URL>
+ ```
 
 ### Other Misc Files:
+
+`bin/add-remote-ec2-sshkey`  Utility script to copy the ssh key to a specified remote host
+
+`nginx/` nginx-specific config
+
+`roles/`  Empty directory used by Ansible
+
+`99-docker.conf.j2`  Configuration file for docker logging
+
+`README.md` The contents of this file
+
+`add-datadog-agent.yml`  Ansible script to add DataDog to the current server
+
+`cleanup.yml`  Ansible script that performs a cleanup of the `./tmp/`
+
+`config-jenkins-nodes.yml` Ansible script to configure Jenkins node and install Jenkins
+
+`deploy-jenkins.yml`  Ansible script called by `config-jenkins-nodes.yml` to deploy Jenkins in Docker container
+
+`docker-compose.jenkins.yml.j2` jinja2 template of the docker compose file used to compose the docker containers needed for Jenkins
 
 `hosts`  Here you configure the hosts that Ansible will run playbooks against.
 
 `hosts.sample` This is a template of the Ansible `hosts` file.
 
-`nginx/` nginx-specific config
-
-`README.md` The contents of this file
-
 `rsyslog.conf.j2` rsyslog configuration template. 
 
 `tmp/` This file will be created and then destroyed (will contain secrets for SSL and AWS S3).
 
-`cleanup.yml` This performs a cleanup of the `./tmp/` once it's done. 
-
-
 # Deployment
 
-The following assumes that you will be ssh'ing to the current ansible control host. Note that the grey highlights are the code you will be copying.
+There are three ways to deploy: All manual, build manual and deploy from Jenkins, and all from Jenkins.
 
-## Building the `ca_intake` and `casebook_api` docker images
-This section describes the manual build process for developers.   It will evolve to a more automated build prcess using Jenkins CI.
+Note 1: All manual sections assume that you will be ssh'ing to the current ansible control host.
 
-**FOR MAC USERS** Make sure docker-machine is working and you're able to do `docker ps`.
+Note 2: The gray highlights are the code you will be copying.
 
-1. `git clone git@github.com:Casecommons/<INSERT REPO NAME>.git`
-2. `cd <INSERT REPO NAME>`
+## Manually building the `intake_accelerator` and `intake_api_prototype` docker images
+This section describes the manual build process for developers.
+
+**PREREQUESITE** Make sure docker-machine is working and you're able to do `docker ps`.
+
+Starting with intake_accelerator as `<REPO NAME>`, perform the following steps:
+
+1. `git clone git@github.com:ca-cwds/<REPO NAME>.git`
+2. `cd <REPO NAME>`
 3. `git checkout master`
 4. `git pull --rebase`
-5. `docker build -f Dockerfile.production -t casecommons/<INSERT REPO NAME>:$(git rev-parse --short HEAD) . `
+5. `docker build -f Dockerfile.production -t ca-cwds/<REPO NAME>:$(git rev-parse --short HEAD) . `
    (Note: If you encounter warning messages, ignore. All you want is your last line to say `Successfully built ...`)
-6. `docker push casecommons/<INSERT REPO NAME>:$(git rev-parse --short HEAD)` to docker hub
-7. `cd ..` and repeat the above steps for `casebook_api`
+6. `docker push ca-cwds/<REPO NAME>:$(git rev-parse --short HEAD)` to docker hub
+7. `cd ..` and repeat the above steps for `intake_api_prototype` as `<REPO NAME>`
 
 ## Creating an Ansible Control Host.
 
-If you are setting up the infrastructure for the first time, you will need to provision a server to act as the Ansible control host.   Start from a VM with RHEL 7 or higher.
+If you are setting up the infrastructure for the first time, you will need to provision a server to act as the Ansible control host.   Start from a VM with Linux (e.g. Ubuntu is fine).
 
 
 1. Install dependencies:
@@ -85,10 +111,11 @@ If you are setting up the infrastructure for the first time, you will need to pr
   ```
 
 2. You will need a S3 bucket on AWS to store secrets. If you do not have one already, perform the following steps: 
-  - Create an S3 bucket for storing secrets (eg, call it `accelerator-s3-secrets`)
+  - Create an S3 bucket for storing secrets (call it `accelerator-s3-secrets`)
   - Upload all the secret files to S3. You will need the following:
     1. `nginx.crt`
     2. `nginx.key`
+    3. `dd-agent.key`
   - Create an IAM group with read-only permissions to your S3 bucket
   - Create an IAM user and place it into the IAM group created above
 
@@ -107,21 +134,23 @@ If you are setting up the infrastructure for the first time, you will need to pr
    `sudo aws s3 ls` (This should not result in an error, but a list of objects if there are any.)
 
 5. On your Ansible host, create new ssh keys. All you will need is the public key.
-   Run command `ssh-keygen`, taking all the defaults by hitting <enter> until you get back your command prompt.
+   Run command `ssh-keygen`, taking all the defaults by hitting <enter> until you get back your command prompt. Note: If using AWS, use the key pair selected when creating new instances in EC2 (instead of creating a new key pair) and copy the private key (currently CWDS_rsa) to the .ssh directory on the Ansible host.
 
-6. Copy your Ansible hosts public key (*.pub) to all client machines that will be managed by Ansible into file `/$USER/.ssh/authorized_keys`
+6. Copy your Ansible hosts public key (*.pub) to all client machines that will be managed by Ansible into file `/$USER/.ssh/authorized_keys`. Note: If using AWS, this step does not need to be performed on any machines which were created using the CWDS_rsa key.
 
-7. git clone this repo. `git clone https://github.com/Casecommons/accelerator-ansible.git`
+7. Upload the private key created in step 5 into the Jenkins Credentials as a Secret file with the ID set to ssh_private_key. Note: The ID is used in Jenkinsfile and Jenkinsfile.api.
 
-8. `cd accelerator-ansible`
+8. git clone this repo. `git clone https://github.com/Casecommons/accelerator-playbooks.git`
 
-9. Create an inventory file: `cp ./hosts.sample ./hosts`
+9. `cd accelerator-playbooks`
 
-10. In the `hosts` file, under `[logging-node]` and `[api-node]` and `[intake-node]`, insert the clients that will be managed by Ansible (one ip address or hostname per line). 
+10. Create an inventory file: `cp ./hosts.sample ./hosts`
 
-11. Create a vars file:`cp ./group_vars/all.sample ./group_vars/all`
+11. In the `hosts` file, under `[logging-node]` and `[api-node]` and `[intake-node]`, insert the clients that will be managed by Ansible (one ip address or hostname per line). 
 
-12. Now update the `./group_vars/all` file (Note: `intake_elasticsearch_url` and `elasticsearch_log_server` should point to the private IP on AWS. `intake_elasticsearch_url` specifically, is a tempoary solution until we figure out how search will be implemented with the partner): 
+12. Create a vars file:`cp ./group_vars/all.sample ./group_vars/all`
+
+13. Now update the `./group_vars/all` file (Note: `intake_elasticsearch_url` and `elasticsearch_log_server` should point to the private IP on AWS. `intake_elasticsearch_url` specifically, is a tempoary solution until we figure out how search will be implemented with the partner): 
     ```
     vi ./group_vars/all`
     ```
@@ -133,23 +162,23 @@ If you are setting up the infrastructure for the first time, you will need to pr
     intake_elasticsearch_url: <INSERT_INTAKE_ELASTICSEARCH_URL>
     ```
 How do I find the image tag?
-   - intake_image_tag from [here](https://hub.docker.com/r/casecommons/ca_intake/tags/)
-   - api_image_tag from [here](https://hub.docker.com/r/casecommons/casebook_api/tags/)
+   - intake_image_tag from [here](https://hub.docker.com/r/casecommons/intake_accelerator/tags/)
+   - api_image_tag from [here](https://hub.docker.com/r/casecommons/intake_api_prototype/tags/)
 
-13. Verify that the Ansible host can talk to the client:
+14. Verify that the Ansible host can talk to the client:
   ```
-   ansible intake-node -m ping
-   ansible api-node -m ping
-   ansible logging-node -m ping
+   ansible -i ./hosts intake-node -m ping
+   ansible -i ./hosts api-node -m ping
+   ansible -i ./hosts logging-node -m ping
   ```
   You should see a success message.
-14. Follow the deploy section below
+15. Follow the deploy section below
 
 
-## Deploying
+## Manually Deploying
 
 1. SSH into the Ansible Control Host and follow the remaining instructions.
-2. `cd  /home/ec2-user/accelerator-ansible`
+2. `cd  /home/ec2-user/accelerator-playbooks`
 3. Edit the `hosts` inventory file to include the hosts (or ip addresses) you want to run playbooks against: 
    ```
    ...
@@ -178,6 +207,8 @@ How do I find the image tag?
     elasticsearch_log_server: <INSERT_IP_OR_SERVER_NAME>
     intake_image_tag: <INSERT_IMAGE_TAG_HERE>
     api_image_tag: <INSERT_IMAGE_TAG_HERE>
+    api_url: <INSERT_API_URL>
+    intake_elasticsearch_url: <INSERT_INTAKE_ELASTICSEARCH_URL>
     ``` 
 
 8. Now run the following Ansible playbooks:
@@ -192,9 +223,10 @@ How do I find the image tag?
 9. If you are on AWS:
 
 - Open your security group to accept incoming traffic from port 80.
-- Associate the public IP address of the "logging" node with `<logging server domain name>` 
-- Associate the public IP address of the "api" node with `<api server domain name>`
-- Associate the public IP address of the "intake" node with `<intake server domain name>` 
+- In Elastic IPs
+  - Associate the public IP address of the "logging" node with `<logging server domain name>` 
+  - Associate the public IP address of the "api" node with `<api server domain name>`
+  - Associate the public IP address of the "intake" node with `<intake server domain name>` 
 
 10. To verify that the `logging` server works: 
 
@@ -252,6 +284,129 @@ Ensure the links all workd. Currently, the links available are:
 - `Create Person`
 - `Referrals`
 
+## Deploying from Jenkins
+
+### Initial Setup
+
+#### Intake
+
+1. Create a new pipeline with a descriptive name (e.g. intake_deploy_to_acceptance)
+
+2. Check the "This project is parameterized" box and set the following parameters:
+
+|Name|Type|Default Value|Description|
+|----|----|-------------|-----------|
+|AWS_ACCESS_KEY_ID|Password Parameter|`<Access key for AWS>`|This uses the Jenkins user AWS credentials|
+|AWS_SECRET_ACCESS_KEY|Password Parameter|`<Secret access key for AWS>`|This uses the Jenkins user AWS credentials|
+|AWS_DEFAULT_REGION|String Parameter|`<us-east-1>`||
+|HOSTS|Multi-line String Parameter|[ansible-host]<br/>127.0.0.1<br/><br/>[intake-node]<br/><IP of node to host intake>||
+|GROUP_VARS|Multi-line String Parameter|elasticsearch_log_server: <IP of elastic search log server (API server for now)><br/>api_url: http://api.mycasebook.org/<br/>intake_elasticsearch_url: <URL of elastic search server (port 9200 of API server for now)>||
+|SSH_KEY|Credentials Parameter|`<Credential added to Jenkins with ID of ssh_private_key>`|Note: Credential type is Secret file but is not required|
+|DOCKER_CREDENTIALS|Credentials Parameter|`<Credentials that are able to access the casecommons/intake_accelerator images in dockerhub.>`|Note: Credential type is Username with password and is required. Credentials may need to be added to Jenkins credentials|
+|DOCKER_EMAIL|String Parameter|`<Email associated with DOCKER_CREDENTIALS>`||
+|IMAGE_TAG|String Parameter|casecommons/intake_accelerator:`<Tag name of image to be deployed>`||
+
+3. There are no build triggers or advanced project options
+
+4. Set the pipeline
+  - Definition: Pipeline script from SCM
+  - SCM: Git
+  - Repositories
+    - Repository URL: https://github.com/ca-cwds/intake-ansible-playbooks.git
+    - Credentials: None
+  Branches to build: */master
+  Repository browser: (Auto)
+  Additional Behaviors: None
+  Script Path: Jenkinsfile
+
+#### API
+
+1. Create a new pipeline with a descriptive name (e.g. api_deploy_to_acceptance)
+
+2. Check the "This project is parameterized" box and set the following parameters:
+
+|Name|Type|Default Value|Description|
+|----|----|-------------|-----------|
+|AWS_ACCESS_KEY_ID|Password Parameter|`<Access key for AWS>`|This uses the Jenkins user AWS credentials|
+|AWS_SECRET_ACCESS_KEY|Password Parameter|`<Secret access key for AWS>`|This uses the Jenkins user AWS credentials|
+|AWS_DEFAULT_REGION|String Parameter|`<us-east-1>`||
+|HOSTS|Multi-line String Parameter|[ansible-host]<br/>127.0.0.1<br/><br/>[api-node]<br/><IP of node to host api>||
+|GROUP_VARS|Multi-line String Parameter|elasticsearch_log_server: <Private IP of logging server)>||
+|SSH_KEY|Credentials Parameter|`<Credential added to Jenkins with ID of ssh_private_key>`|Note: Credential type is Secret file but is not required|
+|DOCKER_CREDENTIALS|Credentials Parameter|`<Credentials that are able to access the casecommons/intake_accelerator images in dockerhub.>`|Note: Credential type is Username with password and is required. Credentials may need to be added to Jenkins credentials|
+|DOCKER_EMAIL|String Parameter|`<Email associated with DOCKER_CREDENTIALS>`||
+|IMAGE_TAG|String Parameter|casecommons/intake_api_prototype:`<Tag name of image to be deployed>`||
+
+3. There are no build triggers or advanced project options
+
+4. Set the pipeline
+  - Definition: Pipeline script from SCM
+  - SCM: Git
+  - Repositories
+    - Repository URL: https://github.com/ca-cwds/intake-ansible-playbooks.git
+    - Credentials: None
+  Branches to build: */master
+  Repository browser: (Auto)
+  Additional Behaviors: None
+  Script Path: Jenkinsfile.api
+
+### Deployment steps
+
+In Jenkins (https://ci.myhcasebook.org), perform the following steps:
+
+#### Intake
+
+1. Click the intake_deploy_to_acceptance item
+
+2. Click Build with Parameters
+
+3. Verify intake-node (in HOSTS), api_url and intake_elasticsearch_url (in GROUP_VARS), and IMAGE_TAG are correct for this deployment
+
+4. Click Build
+
+#### API
+
+1. Click the api_deploy_to_acceptance item
+
+2. Click Build with Parameters
+
+3. Verify api-node (in HOSTS) and IMAGE_TAG are correct for this deployment
+
+4. Click Build
+
+## Full Build and Deployment from Jenkins
+
+### Initial Setup
+
+1. Create a new pipeline with a descriptive name (e.g. intake(CI))
+
+2. Check GitHub project and set Project url to https://github.com/ca-cwds/intake.git/
+
+2. Check the "This project is parameterized" box and set the following parameters:
+
+|Name|Type|Default Value|Description|
+|----|----|-------------|-----------|
+|DOCKER_USER|String Parameter|`<Username to use for accessing Docker>`||
+|DOCKER_PASSWORD|Password Parameter|`<Password associated to DOCKER_USER`||
+|DEPLOY_JOB|String Parameter|intake_deploy_to_acceptance||
+
+3. Check the Build when a change is pushed to GitHub build trigger
+
+4. There are no advanced project options
+
+5. Set the pipeline
+  - Definition: Pipeline script from SCM
+  - SCM: Git
+  - Repositories
+    - Repository URL: https://github.com/ca-cwds/intake.git
+    - Credentials: None
+  Branches to build: */master
+  Repository browser: (Auto)
+  Additional Behaviors: None
+  Script Path: Jenkinsfile
+  
+Note: For the build to be triggered properly, Jenkins and Github need to be configured such that Github notifies Jenkins of pushes to the specified repository.
+  
 ## Logging
 
 Logging is done with Rsyslog, Kibana, and Elastic search. Rsyslog is pre-installed on each docker host.  Any docker containers will log to the local rsyslog socket. The docker-compose file `docker-compose.log.yml` includes the logging stack as part of this single-node playbook. Feel free to break this up into seperate services when doing multi-node deploys, e.g, kibana on a separate instance.
