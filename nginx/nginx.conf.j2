@@ -15,9 +15,9 @@ http {
   server {
     listen 80;
     server_name localhost;
-    root {{ public_root }}; 
+    root {{ public_root }};
 
-    listen 443 ssl; 
+    listen 443 ssl;
     ssl_certificate {{ ssl_path }}/{{ ssl_crt_file }};
     ssl_certificate_key {{ ssl_path }}/{{ ssl_key_file }};
 

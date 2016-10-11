@@ -169,7 +169,7 @@
       ssl_crt_file: nginx.crt
       ssl_path: /etc/nginx/ssl
       nginx_conf_fullpath: /etc/nginx/nginx.conf
-      public_root: /app/public
+      public_root: /ca_intake/public
 
   - name: Remove stopped containers older than a week
     shell: docker ps -a | awk '/Exited/ && /weeks ago/ {print "docker rm", $1}' | sh
