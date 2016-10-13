@@ -1,6 +1,6 @@
 --- ### api playbook
 
-- hosts: ansible-host
+- hosts: jenkins-host
   connection: local
   gather_facts: no
 
