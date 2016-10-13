@@ -194,8 +194,10 @@ How do I find the image tag?
    ...
    ```
 
+   (NOTE: If you want to deploy Jenkins, add `[jenkins-node]` and the corresponding IP address to the hosts file.)
+
 4. To verify connectivity between the Ansible control server and the clients: `ansible -i ./hosts all -m ping`
-  (Note: All clients should succeed except for the ansible host)
+  (Note: All clients should succeed except for the jenkins host)
 
 5. Change directories: `cd  groups_vars`
 
@@ -219,6 +221,10 @@ How do I find the image tag?
    ```
 
  (NOTE: The playbook will prompt you for your dockerhub login, password, and email.)
+ (NOTE 2: If you want to deploy Jenkins and have followed the note in step 3, run the following Ansible playbook
+ ```
+ `ansible-playbook -i ./hosts config-jenkins-nodes.yml` (Note: You'll be prompted for your dockerhub credentials)
+ ```
 
 9. If you are on AWS:
 
