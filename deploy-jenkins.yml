@@ -6,15 +6,15 @@
 - name: Create directory structure /etc/nginx/ssl
   file: path={{ ssl_path }} state=directory mode=0755
 
-- name: Generate "nginx.conf" from Ansible to docker host
+- name: Generate "nginx.conf" from Ansible host on Jenkins instance to docker host
   template:
     src: ./nginx/nginx.jenkins.conf.j2
     dest: '{{ nginx_conf_fullpath }}'
 
-- name: Copy ssl cert from Ansible Host to Nginx Host
+- name: Copy ssl cert from Ansible Host on Jenkins instance to Nginx Host
   copy: remote_src=False src=./tmp/{{ ssl_crt_file }} dest={{ ssl_path }}/{{ ssl_crt_file }}
 
-- name: Copy ssl key from Ansible Host to Nginx Host
+- name: Copy ssl key from Ansible Host on Jenkins instance to Nginx Host
   copy: remote_src=False src=./tmp/{{ ssl_key_file }} dest={{ ssl_path }}/{{ ssl_key_file }}
 
 - name: Create volume for jenkins home directory

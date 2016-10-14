@@ -13,7 +13,7 @@ node {
                 ]) {
 
                 withCredentials([
-                    [$class: 'FileBinding', credentialsId: 'ssh_private_key', variable: 'KEY_FILE'],
+                    [$class: 'FileBinding', credentialsId: 'AWS_SSH_KEY', variable: 'KEY_FILE'],
                     [$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker_credentials',
                                 usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD']
                 ]) {
