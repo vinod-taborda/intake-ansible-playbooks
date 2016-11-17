@@ -1,4 +1,8 @@
 node {
+    def curStage = 'Start'
+    def emailList = EMAIL_NOTIFICATION_LIST ?: 'thomas.ramirez@osi.ca.gov'
+    def branch = env.BRANCH_NAME ?: 'master'
+ 
     ws {
         try {
             checkout scm
@@ -18,19 +22,35 @@ node {
                                 usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD']
                 ]) {
                     stage('Install dependencies') {
+                        stage = 'Install dependencies'
                         sh 'ansible-galaxy install -p ./roles dochang.docker'
                         sh 'ansible-galaxy install -p ./roles Datadog.datadog'
                     }
                     stage('Write variable files') {
+                        stage = 'Write variable files'
                         writeFile file: './hosts', text: HOSTS
                         writeFile file: './group_vars/all', text: GROUP_VARS
                     }
 
                     stage('Deploy') {
+                        stage = 'Deploy'
                         sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE username=$DOCKER_USER email=$DOCKER_EMAIL password=$DOCKER_PASSWORD" config-docker-intake-node.yml'
                     }
                 }
             }
+        }
+        catch(e) {
+            def tagOnly = IMAGE_TAG.substring(IMAGE_TAG.lastIndexOf(":"))
+            if(tagOnly == ':latest') {
+                emailext (
+                    to: emailList,
+                    subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage ${curStage}",
+                    body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}':</p>
+                        <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>"""
+                )
+                slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}' (${env.BUILD_URL})")
+            }
+            throw e
         }
         finally {
             stage('Clean') {
