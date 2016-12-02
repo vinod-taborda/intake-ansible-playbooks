@@ -31,6 +31,30 @@ services:
     networks:
       - ci
 
+  jenkins-slave:
+    image: casecommons/ca_jenkins:{{ image_tag }}-slave
+    environment:
+        DOCKER_GID: "100"
+        DOCKER_ENGINE: "1.12.0"
+        DOCKER_COMPOSE: "1.8.0"
+        SLAVE_VERSION: "2.2"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ci
+    command:
+      - java
+      - -jar
+      - slave.jar
+      - -master
+      - http://jenkins:8080/
+      - -username
+      - ${JENKINS_USERNAME}
+      - -password
+      - ${JENKINS_PASSWORD}
+      - -labels
+      - DOCKER
+
 networks:
   ci:
     external:
