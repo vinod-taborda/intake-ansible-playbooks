@@ -3,6 +3,16 @@
     src: ./docker-compose.jenkins.yml.j2
     dest: '{{ project_source }}/docker-compose.jenkins.yml'
 
+- name: Copy Makefile for slaves
+  copy:
+    src: ./Makefile
+    dest: '{{ project_source}}/Makefile'
+
+- name: Copy Makefile.settings
+  copy:
+    src: ./Makefile.settings
+    dest:  '{{ project_source}}/Makefile.settings'
+
 - name: Create directory structure /etc/nginx/ssl
   file: path={{ ssl_path }} state=directory mode=0755
 
