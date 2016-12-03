@@ -7,34 +7,24 @@ node {
     try {
         checkout scm
 
-            stage('Launch') {
-                curStage = 'Launch'
-                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'JENKINS_CREDENTIALS',
-                        usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD'],
-                        [$class: 'UsernamePasswordMultiBinding', credentialsId: 'DOCKER_CREDENTIALS'
-                            usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD']]) {
-                    withEnv(["DOCKER_USER=${DOCKER_USER}",
-                           "DOCKER_PASSWORD=${DOCKER_PASSWORD}",
-                           "JENKINS_USERNAME=${JENKINS_USERNAME}",
-                           "JENKINS_PASSWORD=${JENKINS_PASSWORD}"]) {
-                        sh "make slave ${NUM_SLAVES}"
-                        sh 'ansible-playbook --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE" config-jenkins-node.yml'
-                    }
+        stage('Launch') {
+            curStage = 'Launch'
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'JenkinsSlaveMaster',
+                    usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+                withEnv(["JENKINS_USERNAME=${JENKINS_USERNAME}",
+                       "JENKINS_PASSWORD=${JENKINS_PASSWORD}"]) {
+                    sh "make slave ${NUM_SLAVES}"
                 }
             }
-
         }
     }
     catch (e) {
-        emailext (
-            to: emailList,
-            subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage ${curStage}",
-            body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}':</p>
-                <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>"""
-        )
-
-        slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}' (${env.BUILD_URL})")
-
+//        emailext (
+//            to: emailList,
+//            subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage ${curStage}",
+//            body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}':</p>
+//                <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>"""
+//        )
         throw e
     }
 }

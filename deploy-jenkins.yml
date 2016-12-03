@@ -36,5 +36,8 @@
 - name: Down any existing containers and volumes
   command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} down --remove-orphans
 
-- name: Start up the docker service
-  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} up -d --remove-orphans
+- name: Start up the nginx service
+  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} up -d --remove-orphans nginx
+
+- name: Start up the Jenkins service
+  command: docker-compose -f docker-compose.jenkins.yml --project-name={{ project_name }} up -d --remove-orphans jenkin
