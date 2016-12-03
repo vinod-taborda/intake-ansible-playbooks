@@ -13,25 +13,25 @@ init:
 
 build: init
 	${INFO} "Building image..."
-	@ docker-compose build --pull
+	@ docker-compose -f docker-compose.jenkins.yml build --pull
 	${INFO} "Build complete"
 
 jenkins: init
 	${INFO} "Starting jenkins..."
-	@ docker-compose up -d jenkins
+	@ docker-compose -f docker-compose.jenkins.yml up -d jenkins
 	${INFO} "Jenkins has started..."
 	${INFO} "Streaming Jenkins logs - press CTRL+C to exit..."
-	@ docker-compose logs -f jenkins
+	@ docker-compose -f docker-compose.jenkins.yml logs -f jenkins
 
 slave: init
 	${INFO} "Running $(SLAVE_COUNT) slave(s)..."
-	@ docker-compose scale jenkins-slave=$(SLAVE_COUNT)
+	@ docker-compose -f docker-compose.jenkins.yml scale jenkins-slave=$(SLAVE_COUNT)
 	${INFO} "$(SLAVE_COUNT) slave(s) running"
 
 clean:
 	${INFO} "Stopping services..."
-	@ docker-compose down -v || true
+	@ docker-compose -f docker-compose.jenkins.yml down -v || true
 	${INFO} "Services stopped"
 
 logs:
-	@ docker-compose logs -f
+	@ docker-compose -f docker-compose.jenkins.yml logs -f
