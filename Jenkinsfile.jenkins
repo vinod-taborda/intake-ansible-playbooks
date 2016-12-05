@@ -7,14 +7,17 @@ node {
     try {
         checkout scm
 
+        stage('Write variable files') {
+            stage = 'Write variable files'
+            writeFile file: './hosts', text: HOSTS
+        }
+
         stage('Launch') {
             curStage = 'Launch'
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'JenkinsSlaveMaster',
-                    usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-                withEnv(["JENKINS_USERNAME=${JENKINS_USERNAME}",
-                       "JENKINS_PASSWORD=${JENKINS_PASSWORD}"]) {
-                    sh "make slave ${NUM_SLAVES}"
-                }
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'JenkinsSlave',
+                    usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD'],
+                    [$class: 'FileBinding', credentialsId: 'AWS_SSH_KEY', variable: 'KEY_FILE']]) {
+                sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="numSlaves=$NUM_SLAVES jenkinsUsername=$JENKINS_USERNAME jenkinsPassword=$JENKINS_PASSWORD" config-jenkins-slaves.yml'
             }
         }
     }

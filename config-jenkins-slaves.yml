@@ -1,0 +1,15 @@
+---
+
+- hosts: jenkins-node
+  connection: ssh
+  user: ec2-user
+  become: yes
+  gather_facts: yes
+
+  tasks:
+
+  - name: Update slaves
+    shell: docker-compose -f docker-compose.jenkins.yml scale jenkins-slave='{{ numSlaves }}'
+    environment:
+      JENKINS_USERNAME: '{{ jenkinsUsername }}'
+      JENKINS_PASSWORD: '{{ jenkinsPassword }}'
