@@ -141,6 +141,9 @@
     command: docker network create ci
     ignore_errors: True
 
+  - name: Put docker-py back to version 1.10.6
+    shell: pip install 'docker-py==1.10.6' --force-reinstall
+
   - name: Deploy jenkins via "deploy-jenkins.yml", with specified variables
     include: deploy-jenkins.yml
     vars:
@@ -151,10 +154,6 @@
       nginx_conf_fullpath: /etc/nginx/nginx.conf
       subdomain_name: ci.mycasebook.org
     tags: jenkins
-
-  - include: add-datadog-agent.yml
-    vars:
-      hosts: jenkins-node
 
   - name: Remove stopped containers older than a week
     shell: docker ps -a | awk '/Exited/ && /weeks ago/ {print "docker rm", $1}' | sh
