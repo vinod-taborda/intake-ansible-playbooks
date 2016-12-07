@@ -17,7 +17,9 @@ node {
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'JenkinsSlave',
                     usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD'],
                     [$class: 'FileBinding', credentialsId: 'AWS_SSH_KEY', variable: 'KEY_FILE']]) {
-                sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="numSlaves=$NUM_SLAVES jenkinsUsername=$JENKINS_USERNAME jenkinsPassword=$JENKINS_PASSWORD" config-jenkins-slaves.yml'
+                withEnv(['ANSIBLE_HOST_KEY_CHECKING=False']) {
+                    sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="numSlaves=$NUM_SLAVES jenkinsUsername=$JENKINS_USERNAME jenkinsPassword=$JENKINS_PASSWORD" config-jenkins-slaves.yml'
+                }
             }
         }
     }
