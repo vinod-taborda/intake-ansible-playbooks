@@ -1,4 +1,4 @@
-node {
+node('Slave') {
     def curStage = 'Start'
     def emailList = EMAIL_NOTIFICATION_LIST ?: 'thomas.ramirez@osi.ca.gov'
     def branch = env.BRANCH_NAME ?: 'master'
