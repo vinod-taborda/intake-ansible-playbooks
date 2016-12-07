@@ -30,4 +30,9 @@ node {
 //        )
         throw e
     }
+    finally {
+        stage('Clean') {
+            sh 'rm -rf .* * 2>/dev/null || true'
+        }
+    }
 }
