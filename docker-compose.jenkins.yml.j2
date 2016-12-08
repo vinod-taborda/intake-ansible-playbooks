@@ -53,7 +53,9 @@ services:
       - -password
       - ${JENKINS_PASSWORD}
       - -labels
-      - DOCKER
+      - Slave
+      - -mode
+      - exclusive
 
 networks:
   ci:
