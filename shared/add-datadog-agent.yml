@@ -3,7 +3,7 @@
   become: yes
 
   vars:
-    datadog_api_key: "{{ lookup('file', './tmp/dd-agent.key') }}"
+    datadog_api_key: "{{ lookup('file', '../tmp/dd-agent.key') }}"
     datadog_checks:
       process:
         init_config:

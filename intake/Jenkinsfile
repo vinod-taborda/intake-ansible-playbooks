@@ -23,13 +23,13 @@ node('Slave') {
                 ]) {
                     stage('Install dependencies') {
                         stage = 'Install dependencies'
-                        sh 'ansible-galaxy install -p ./roles dochang.docker'
-                        sh 'ansible-galaxy install -p ./roles Datadog.datadog'
+                        sh 'ansible-galaxy install -p ../roles dochang.docker'
+                        sh 'ansible-galaxy install -p ../roles Datadog.datadog'
                     }
                     stage('Write variable files') {
                         stage = 'Write variable files'
-                        writeFile file: './hosts', text: HOSTS
-                        writeFile file: './group_vars/all', text: GROUP_VARS
+                        writeFile file: '../hosts', text: HOSTS
+                        writeFile file: '../group_vars/all', text: GROUP_VARS
                     }
 
                     stage('Deploy') {

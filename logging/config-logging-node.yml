@@ -105,13 +105,13 @@
 
   - name: Generate rsyslog conf
     template:
-      src: ./rsyslog.conf.j2
+      src: ../shared/rsyslog.conf.j2
       dest: /etc/rsyslog.conf
     register: rsyslog_conf
 
   - name: Generate docker logging conf
     template:
-      src: ./99-docker.conf.j2
+      src: ../shared/99-docker.conf.j2
       dest: /etc/rsyslog.d/99-docker.conf
     register: rsyslog_logging_conf
 
@@ -150,6 +150,6 @@
 
 ######################################
 
-- include: add-datadog-agent.yml
+- include: ../shared/add-datadog-agent.yml
   vars:
     hosts: logging-node
