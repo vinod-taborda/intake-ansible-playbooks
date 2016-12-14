@@ -23,18 +23,18 @@ node('Slave') {
                 ]) {
                     stage('Install dependencies') {
                         stage = 'Install dependencies'
-                        sh 'ansible-galaxy install -p ../roles dochang.docker'
-                        sh 'ansible-galaxy install -p ../roles Datadog.datadog'
+                        sh 'ansible-galaxy install -p ./intake/roles dochang.docker'
+                        sh 'ansible-galaxy install -p ./shared/roles Datadog.datadog'
                     }
                     stage('Write variable files') {
                         stage = 'Write variable files'
-                        writeFile file: '../hosts', text: HOSTS
-                        writeFile file: '../group_vars/all', text: GROUP_VARS
+                        writeFile file: './hosts', text: HOSTS
+                        writeFile file: './group_vars/all', text: GROUP_VARS
                     }
 
                     stage('Deploy') {
                         stage = 'Deploy'
-                        sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE username=$DOCKER_USER email=$DOCKER_EMAIL password=$DOCKER_PASSWORD" config-docker-intake-node.yml'
+                        sh 'ansible-playbook -u ec2-user -i ./hosts --key-file=$KEY_FILE --skip-tags=local_dependencies --extra-vars="intake_image_tag=$DOCKER_IMAGE username=$DOCKER_USER email=$DOCKER_EMAIL password=$DOCKER_PASSWORD" ./intake/config-docker-intake-node.yml'
                     }
                 }
             }
@@ -48,7 +48,7 @@ node('Slave') {
                     body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}':</p>
                         <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>"""
                 )
-                slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}' (${env.BUILD_URL})")
+//                slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' in stage '${curStage}' for branch '${branch}' (${env.BUILD_URL})")
             }
             throw e
         }
