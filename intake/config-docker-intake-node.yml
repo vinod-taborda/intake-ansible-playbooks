@@ -37,27 +37,27 @@
     pip: name=boto state=present
 
   - name: Ensure tmp directory exists
-    file: path=./tmp state=directory mode=777
+    file: path=../tmp state=directory mode=777
 
   - name: Copy nginx.key to local
     s3:
       bucket: '{{ secrets_bucket }}'
       object: '{{ ssl_key_file }}'
-      dest: './tmp/nginx.key'
+      dest: '../tmp/nginx.key'
       mode: get
 
   - name: Copy nginx.crt to local
     s3:
       bucket: '{{ secrets_bucket }}'
       object: '{{ ssl_crt_file }}'
-      dest: './tmp/nginx.crt'
+      dest: '../tmp/nginx.crt'
       mode: get
 
   - name: Copy datadog key to local
     s3:
       bucket: '{{ secrets_bucket }}'
       object: 'dd-agent.key'
-      dest: './tmp/dd-agent.key'
+      dest: '../tmp/dd-agent.key'
       mode: get
 
 ################################### intake
