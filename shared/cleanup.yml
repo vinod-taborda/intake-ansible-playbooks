@@ -5,5 +5,5 @@
 
   tasks:
   - name: Delete all the certs and keys downloaded from S3
-    local_action: file name=./tmp/ state=absent
+    local_action: file name=../tmp/ state=absent
 
